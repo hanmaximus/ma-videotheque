@@ -1,0 +1,62 @@
+[
+  {
+    "title": "Centurion",
+    "original": "Centurion",
+    "type": "Film",
+    "director": "Neil Marshall",
+    "cast": "Michael Fassbender, Dominic West, Olga Kurylenko",
+    "music": "Ilan Eshkeri",
+    "format": "Blu-ray",
+    "release_fr_date": "2010-08-11",
+    "year_original": 2010,
+    "duration": 97,
+    "synopsis": "Exemple de synopsis à remplacer par les données de votre collection.",
+    "bonus": "Exemple de bonus à remplacer.",
+    "image": ""
+  },
+  {
+    "title": "Le Voyage de Chihiro",
+    "original": "千と千尋の神隠し",
+    "type": "Film",
+    "director": "Hayao Miyazaki",
+    "cast": "Rumi Hiiragi, Miyu Irino",
+    "music": "Joe Hisaishi",
+    "format": "DVD, Blu-ray, Digital",
+    "release_fr_date": "2002-04-10",
+    "year_original": 2001,
+    "duration": 125,
+    "synopsis": "Exemple de fiche : une jeune fille découvre un monde mystérieux peuplé d'esprits.",
+    "bonus": "",
+    "image": ""
+  },
+  {
+    "title": "Planet Earth",
+    "original": "Planet Earth",
+    "type": "Série",
+    "director": "Alastair Fothergill",
+    "cast": "David Attenborough",
+    "music": "George Fenton",
+    "format": "4K UHD, Blu-ray, Digital",
+    "release_fr_date": "2007-03-25",
+    "year_original": 2006,
+    "duration": 50,
+    "synopsis": "Exemple de série documentaire. La durée indiquée correspond ici à un épisode.",
+    "bonus": "",
+    "image": ""
+  },
+  {
+    "title": "Sherlock: Une étude en rose",
+    "original": "Sherlock: A Study in Pink",
+    "type": "Téléfilm",
+    "director": "Paul McGuigan",
+    "cast": "Benedict Cumberbatch, Martin Freeman",
+    "music": "David Arnold, Michael Price",
+    "format": "Blu-ray, Digital",
+    "release_fr_date": "2010-10-01",
+    "year_original": 2010,
+    "duration": 89,
+    "synopsis": "Exemple de fiche pour illustrer les types et les durées.",
+    "bonus": "",
+    "image": ""
+  }
+]
