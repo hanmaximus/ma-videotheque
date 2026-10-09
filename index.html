@@ -33,8 +33,29 @@
   </section>
 
   <section id="homeView" class="view-hidden">
-    <header>
-      <input id="searchInput" type="search" placeholder="Rechercher un titre, réalisateur, acteur, musique, support…" autocomplete="off" aria-label="Rechercher dans la vidéothèque">
+    <header class="search-row">
+      <label class="search-criterion-wrap" for="searchCriterion">
+        <span class="search-label">Critère de recherche</span>
+        <select id="searchCriterion" aria-label="Critère de recherche">
+          <option value="title">Titre du film</option>
+          <option value="original">Titre original</option>
+          <option value="year">Année de production</option>
+          <option value="duration">Durée</option>
+          <option value="director">Réalisateur</option>
+          <option value="screenwriter">Scénariste</option>
+          <option value="cast">Acteurs / casting</option>
+          <option value="genre">Genre</option>
+          <option value="music">Musique</option>
+          <option value="support">Support</option>
+          <option value="synopsis">Synopsis</option>
+          <option value="bonus">Bonus</option>
+          <option value="all">Tous les champs</option>
+        </select>
+      </label>
+      <label class="search-query-wrap" for="searchInput">
+        <span class="search-label">Votre recherche</span>
+        <input id="searchInput" type="search" placeholder="Saisir un terme…" autocomplete="off" aria-label="Votre recherche">
+      </label>
       <button id="searchButton" type="button">Rechercher</button>
     </header>
     <div class="status-line"><span id="siteStatus">Chargement du catalogue…</span></div>
@@ -47,6 +68,8 @@
         <div id="filmTypeYear" class="meta"></div>
         <div class="meta"><strong>Format :</strong><div id="filmSupports" class="supports"></div></div>
         <div class="meta"><strong>Réalisateur :</strong> <span id="filmDirector">—</span></div>
+        <div class="meta"><strong>Scénariste :</strong> <span id="filmScreenwriter">—</span></div>
+        <div class="meta"><strong>Genre :</strong> <span id="filmGenre">—</span></div>
         <div class="meta"><strong>Casting :</strong> <span id="filmCast">—</span></div>
         <div class="meta"><strong>Musique :</strong> <span id="filmMusic">—</span></div>
         <div class="section-title">Synopsis</div><div id="filmSynopsis" class="body-copy">—</div>
@@ -54,7 +77,7 @@
       </div>
     </article>
   </section>
-  <footer>Prototype de test — les données affichées sont des exemples.</footer>
+  <footer>Ma Vidéothèque — catalogue personnel.</footer>
 </div>
 </body>
 </html>
