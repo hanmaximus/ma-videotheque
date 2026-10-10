@@ -75,10 +75,13 @@ function addClickableNames(id, value, type) {
   // Ne touche pas aux élisions comme « d'Edgar » ou « d’Edgar ».
   if(type==='screenwriter') {
     // Ajoute l'espace manquant après les formules complètes, sans modifier « d'Edgar ».
-    text=text.replace(/d['’]après\s+le\s+roman\s+de(?=\S)/ig, match => match + ' ');
-    text=text.replace(/d['’]après\s+l['’]œuvre\s+de(?=\S)/ig, match => match + ' ');
-    text=text.replace(/d['’]après\s+une\s+histoire\s+de(?=\S)/ig, match => match + ' ');
-    text=text.replace(/d['’]après\s+la\s+nouvelle\s+de(?=\S)/ig, match => match + ' ');
+    // Force une espace après la formule complète si le nom est collé à « de ».
+    // Le traitement est fait dans le texte AVANT de créer les liens, pour éviter
+    // que le nom du scénariste soit attaché à la formule.
+    text=text.replace(/(d['’]après\s+le\s+roman\s+de)(?=\S)/ig, '$1 ');
+    text=text.replace(/(d['’]après\s+l['’]œuvre\s+de)(?=\S)/ig, '$1 ');
+    text=text.replace(/(d['’]après\s+une\s+histoire\s+de)(?=\S)/ig, '$1 ');
+    text=text.replace(/(d['’]après\s+la\s+nouvelle\s+de)(?=\S)/ig, '$1 ');
   }
   // Pour les scénaristes, les noms restent cliquables, mais pas les mots de liaison
   // ni les mentions de source (« d'après le roman de… », etc.).
