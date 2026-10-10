@@ -71,17 +71,30 @@ function addClickableNames(id, value, type) {
   const box=$(id);box.replaceChildren();
   const text=clean(value);
   if(!text){box.textContent='—';return;}
-  // Pour les scénaristes, ne rendre cliquables que les noms, pas les mots de liaison.
+  // Pour les scénaristes, les noms restent cliquables, mais pas les mots de liaison
+  // ni les mentions de source (« d'après le roman de… », etc.).
   if(type==='screenwriter') {
-    const parts=text.split(/(\s+et\s+|,\s*d['’]après\s+une\s+histoire\s+de\s+)/i);
-    parts.forEach(part=>{
-      if(!part) return;
-      if(/^\s+et\s+$/i.test(part) || /^,\s*d['’]après\s+une\s+histoire\s+de\s+$/i.test(part)) {
-        box.append(document.createTextNode(part));
-      } else {
-        const a=document.createElement('a');a.href='#';a.textContent=part.trim();a.addEventListener('click',e=>{e.preventDefault();runSearch(part.trim(),type,true);});box.append(a);
+    // split() avec un groupe capturant ne conserve que la première occurrence : utiliser matchAll pour toutes.
+    const connector = /\s+et\s+|,?\s*d['’]après\s+(?:le\s+roman\s+autobiographique\s+My\s+Reminiscences\s+as\s+a\s+cowboy\s+publié\s+en\s+1930\s+par|le\s+roman\s+(?:de|d['’])|l['’]œuvre\s+(?:de|d['’])|une\s+histoire\s+(?:de|d['’])|la\s+nouvelle\s+(?:de|d['’]))/ig;
+    let cursor=0, match;
+    const appendName = part => {
+      const name=part.trim();
+      if(!name) return;
+      const a=document.createElement('a');a.href='#';a.textContent=name;
+      a.addEventListener('click',e=>{e.preventDefault();runSearch(name,type,true);});
+      box.append(a);
+    };
+    while((match=connector.exec(text))!==null) {
+      appendName(text.slice(cursor,match.index));
+      box.append(document.createTextNode(match[0]));
+      cursor=match.index+match[0].length;
+      // Garantit une séparation entre la mention (« d'après le roman de »…) et le nom,
+      // même si la donnée source a été saisie sans espace après la formule.
+      if (/d['’]après/i.test(match[0]) && !/d['’]$/.test(match[0]) && cursor < text.length && !/\s/.test(text[cursor])) {
+        box.append(document.createTextNode(' '));
       }
-    });
+    }
+    appendName(text.slice(cursor));
     return;
   }
   const parts=text.split(/\s*[,;]\s*|\n+/).map(s=>s.trim()).filter(Boolean);
@@ -115,7 +128,14 @@ function showFilm(film, updateAddress = true) {
   $('filmTypeYear').textContent=details.join(' · ')||'—';
   const supports=$('filmSupports');supports.replaceChildren();const supportNames=supportsFor(film);
   supportNames.forEach(name=>{const b=document.createElement('button');b.type='button';b.className='support-badge';b.textContent=name;b.title=`Afficher les titres en ${name}`;b.addEventListener('click',()=>{activeSupport=name;visibleCount=PAGE_SIZE;renderStats();renderCatalog();showView('catalog');});supports.append(b);});
-  addClickableNames('filmDirector',film.director,'director');addClickableNames('filmScreenwriter',film.screenwriter,'screenwriter');addClickableNames('filmGenre',film.genre,'genre');addClickableNames('filmCast',film.cast,'cast');addClickableNames('filmMusic',film.music,'music');$('filmSynopsis').textContent=film.synopsis||'—';$('filmBonus').textContent=film.bonus||'—';
+  addClickableNames('filmDirector',film.director,'director');addClickableNames('filmScreenwriter',film.screenwriter,'screenwriter');addClickableNames('filmGenre',film.genre,'genre');addClickableNames('filmCast',film.cast,'cast');addClickableNames('filmMusic',film.music,'music');
+  $('filmCountry').textContent=film.country||'—';
+  const sagaBox=$('filmSaga');sagaBox.replaceChildren();
+  if(clean(film.saga)) {
+    const sagaButton=document.createElement('button');sagaButton.type='button';sagaButton.className='text-link';sagaButton.textContent=clean(film.saga);sagaButton.title=`Retrouver tous les films de la saga ${clean(film.saga)}`;
+    sagaButton.addEventListener('click',()=>runSearch(clean(film.saga),'saga',true));sagaBox.append(sagaButton);
+  } else sagaBox.textContent='—';
+  $('filmSynopsis').textContent=film.synopsis||'—';$('filmBonus').textContent=film.bonus||'—';
   const poster=$('poster');poster.replaceChildren();if(film.image){const img=document.createElement('img');const imageValue=clean(film.image);img.src=/^(?:https?:)?\/\//i.test(imageValue)||imageValue.startsWith('/')?imageValue:(imageValue.startsWith('images/')?imageValue:`images/${imageValue}`);img.alt=`Affiche de ${film.title||'ce titre'}`;img.loading='lazy';img.onerror=()=>{poster.replaceChildren();poster.textContent='Affiche indisponible';};poster.append(img);}else{poster.textContent='Affiche à ajouter';}
   setStatus('Fiche affichée depuis le catalogue local.');window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -141,7 +161,7 @@ function runSearch(query, type=null, scrollToResults=false) {
   const selectedType = type || $('searchCriterion').value || 'all';
   const normalized=normalizeText(q);
   const durationTarget=selectedType==='duration'?parseDurationQuery(q):null;
-  const fields={title:f=>f.title,original:f=>f.original,year:f=>String(f.year_original??''),director:f=>f.director,screenwriter:f=>f.screenwriter,cast:f=>f.cast,music:f=>f.music,support:f=>f.format,synopsis:f=>f.synopsis,bonus:f=>f.bonus,genre:f=>f.genre};
+  const fields={title:f=>f.title,original:f=>f.original,year:f=>String(f.year_original??''),director:f=>f.director,screenwriter:f=>f.screenwriter,cast:f=>f.cast,music:f=>f.music,support:f=>f.format,synopsis:f=>f.synopsis,bonus:f=>f.bonus,genre:f=>f.genre,saga:f=>f.saga};
   const found=films.filter(f=>{
     if(selectedType==='duration') {
       const duration=parseDurationValue(f.duration);
@@ -152,7 +172,7 @@ function runSearch(query, type=null, scrollToResults=false) {
     if(selectedType==='support') return supportsFor(f).some(s=>normalizeText(s).includes(normalized)) || normalizeText(f.format).includes(normalized);
     return normalizeText(fields[selectedType]?.(f) || '').includes(normalized);
   });
-  const labels={all:'Tous les champs',title:'Titre du film',original:'Titre original',year:'Année de production',duration:'Durée',director:'Réalisateur',screenwriter:'Scénariste',cast:'Acteurs / casting',music:'Musique',support:'Support',synopsis:'Synopsis',bonus:'Bonus',genre:'Genre'};
+  const labels={all:'Tous les champs',title:'Titre du film',original:'Titre original',year:'Année de production',duration:'Durée',director:'Réalisateur',screenwriter:'Scénariste',cast:'Acteurs / casting',music:'Musique',support:'Support',synopsis:'Synopsis',bonus:'Bonus',genre:'Genre',saga:'Saga'};
   const label=selectedType==='duration'&&durationTarget!==null?`Durée (${durationTarget-5} à ${durationTarget+5} min)`:labels[selectedType]||'Recherche';
   renderResults(`${label} : « ${q} »`,found);setStatus(`${found.length} résultat(s) trouvé(s).`);
   if (scrollToResults) requestAnimationFrame(() => $('results').scrollIntoView({behavior:'smooth', block:'start'}));
