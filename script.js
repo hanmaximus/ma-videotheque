@@ -69,8 +69,17 @@ function renderCatalog() {
 }
 function addClickableNames(id, value, type) {
   const box=$(id);box.replaceChildren();
-  const text=clean(value);
+  let text=clean(value);
   if(!text){box.textContent='—';return;}
+  // Corrige à la source l'espace manquant après les formules complètes « d'après… de ».
+  // Ne touche pas aux élisions comme « d'Edgar » ou « d’Edgar ».
+  if(type==='screenwriter') {
+    // Ajoute l'espace manquant après les formules complètes, sans modifier « d'Edgar ».
+    text=text.replace(/d['’]après\s+le\s+roman\s+de(?=\S)/ig, match => match + ' ');
+    text=text.replace(/d['’]après\s+l['’]œuvre\s+de(?=\S)/ig, match => match + ' ');
+    text=text.replace(/d['’]après\s+une\s+histoire\s+de(?=\S)/ig, match => match + ' ');
+    text=text.replace(/d['’]après\s+la\s+nouvelle\s+de(?=\S)/ig, match => match + ' ');
+  }
   // Pour les scénaristes, les noms restent cliquables, mais pas les mots de liaison
   // ni les mentions de source (« d'après le roman de… », etc.).
   if(type==='screenwriter') {
