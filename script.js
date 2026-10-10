@@ -71,18 +71,6 @@ function addClickableNames(id, value, type) {
   const box=$(id);box.replaceChildren();
   let text=clean(value);
   if(!text){box.textContent='—';return;}
-  // Corrige à la source l'espace manquant après les formules complètes « d'après… de ».
-  // Ne touche pas aux élisions comme « d'Edgar » ou « d’Edgar ».
-  if(type==='screenwriter') {
-    // Ajoute l'espace manquant après les formules complètes, sans modifier « d'Edgar ».
-    // Force une espace après la formule complète si le nom est collé à « de ».
-    // Le traitement est fait dans le texte AVANT de créer les liens, pour éviter
-    // que le nom du scénariste soit attaché à la formule.
-    text=text.replace(/(d['’]après\s+le\s+roman\s+de)(?=\S)/ig, '$1 ');
-    text=text.replace(/(d['’]après\s+l['’]œuvre\s+de)(?=\S)/ig, '$1 ');
-    text=text.replace(/(d['’]après\s+une\s+histoire\s+de)(?=\S)/ig, '$1 ');
-    text=text.replace(/(d['’]après\s+la\s+nouvelle\s+de)(?=\S)/ig, '$1 ');
-  }
   // Pour les scénaristes, les noms restent cliquables, mais pas les mots de liaison
   // ni les mentions de source (« d'après le roman de… », etc.).
   if(type==='screenwriter') {
@@ -101,10 +89,14 @@ function addClickableNames(id, value, type) {
       // Conserve la formule telle quelle, mais ajoute l'espace AVANT d'afficher le nom.
       // On vérifie explicitement que la formule se termine par « de » (et non par « d' »).
       let connectorText = match[0];
-      const needsSpaceAfterDe = /^\s*d['’]après\s+(?:le\s+roman|l['’]œuvre|une\s+histoire|la\s+nouvelle)\s+de$/i.test(connectorText);
       cursor=match.index+match[0].length;
-      if (needsSpaceAfterDe && cursor < text.length && !/^\s/.test(text.slice(cursor))) {
-        connectorText += ' ';
+      // Le nom suivant est ensuite passé à appendName(), qui fait trim() :
+      // il faut donc mettre l'espace dans le texte du connecteur, pas dans le nom.
+      const isFullSourcePhrase = /d['’]après\s+(?:le\s+roman|l['’]œuvre|une\s+histoire|la\s+nouvelle)\s+de$/i.test(connectorText.trim());
+      if (isFullSourcePhrase) {
+        // Consomme les espaces éventuelles déjà présentes pour n'en afficher qu'une.
+        while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
+        connectorText = connectorText.replace(/\s*$/, '') + ' ';
       }
       box.append(document.createTextNode(connectorText));
     }
