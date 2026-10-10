@@ -101,7 +101,7 @@ function addClickableNames(id, value, type) {
       // Conserve la formule telle quelle, mais ajoute l'espace AVANT d'afficher le nom.
       // On vérifie explicitement que la formule se termine par « de » (et non par « d' »).
       let connectorText = match[0];
-      const needsSpaceAfterDe = /d['’]après\s+(?:le\s+roman|l['’]œuvre|une\s+histoire|la\s+nouvelle)\s+de$/i.test(connectorText);
+      const needsSpaceAfterDe = /^\s*d['’]après\s+(?:le\s+roman|l['’]œuvre|une\s+histoire|la\s+nouvelle)\s+de$/i.test(connectorText);
       cursor=match.index+match[0].length;
       if (needsSpaceAfterDe && cursor < text.length && !/^\s/.test(text.slice(cursor))) {
         connectorText += ' ';
