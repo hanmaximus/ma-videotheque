@@ -4,6 +4,10 @@ let films = [];
 let activeSupport = '';
 let visibleCount = PAGE_SIZE;
 let currentFilm = null;
+let navigationFilms = [];
+let navigationMode = 'catalog';
+let catalogPresentation = 'list';
+let searchNavigationFilms = [];
 const $ = id => document.getElementById(id);
 const clean = value => String(value ?? '').trim();
 const normalizeText = value => clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -32,8 +36,11 @@ function showView(which) {
   const catalog = which === 'catalog';
   $('catalogView').classList.toggle('view-hidden', !catalog);
   $('homeView').classList.toggle('view-hidden', catalog);
-  $('catalogButton').classList.toggle('active', catalog);
+  $('catalogButton').classList.toggle('active', catalog && catalogPresentation === 'list');
+  $('posterCatalogButton').classList.toggle('active', catalog && catalogPresentation === 'posters');
   $('homeButton').classList.toggle('active', !catalog);
+  $('catalogList').classList.toggle('hidden', catalogPresentation !== 'list');
+  $('catalogPosterGrid').classList.toggle('hidden', catalogPresentation !== 'posters');
 }
 function getFilteredFilms() {
   const filtered = activeSupport ? films.filter(f => supportsFor(f).includes(activeSupport)) : films;
@@ -52,20 +59,65 @@ function renderStats() {
     button.append(number,label); button.addEventListener('click',()=>{activeSupport=item.name==='Tous les titres'?'':item.name;visibleCount=PAGE_SIZE;renderCatalog();renderStats();}); box.append(button);
   });
 }
+function imageSourceFor(film) {
+  const imageValue = clean(film.image);
+  if (!imageValue) return '';
+  return /^(?:https?:)?\/\//i.test(imageValue) || imageValue.startsWith('/')
+    ? imageValue
+    : (imageValue.startsWith('images/') ? imageValue : `images/${imageValue}`);
+}
+function openFilmFromCatalog(film) { showFilm(film, true, 'catalog'); }
 function renderCatalog() {
-  const list = getFilteredFilms(); const visible = list.slice(0, visibleCount); const box=$('catalogList'); box.replaceChildren();
+  const list = getFilteredFilms();
+  const visible = list.slice(0, visibleCount);
+  const box = $('catalogList');
+  const posterBox = $('catalogPosterGrid');
+  box.replaceChildren();
+  posterBox.replaceChildren();
   $('catalogFilter').textContent = activeSupport ? `Support : ${activeSupport}` : 'Tous les titres';
-  if (!visible.length) { const empty=document.createElement('div');empty.className='empty';empty.textContent='Aucun titre pour ce filtre.';box.append(empty); }
+  if (!visible.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'Aucun titre pour ce filtre.';
+    box.append(empty);
+    posterBox.append(empty.cloneNode(true));
+  }
   visible.forEach(film => {
-    const item=document.createElement('article'); item.className='catalog-item'; item.tabIndex=0; item.setAttribute('role','button');
-    const titleWrap=document.createElement('div'); const title=document.createElement('div');title.className='catalog-title';title.textContent=film.title||'Titre inconnu';titleWrap.append(title);
-    if(film.original){const original=document.createElement('div');original.className='catalog-original';original.textContent=film.original;titleWrap.append(original);}
-    const format=document.createElement('div');format.className='catalog-format';format.textContent=supportsFor(film).join(' · ')||'—';item.append(titleWrap,format);
-    const open=()=>showFilm(film);item.addEventListener('click',open);item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});box.append(item);
+    // Présentation en liste : conservée, avec les mêmes éléments et interactions.
+    const item = document.createElement('article');
+    item.className = 'catalog-item'; item.tabIndex = 0; item.setAttribute('role', 'button');
+    const titleWrap = document.createElement('div');
+    const title = document.createElement('div'); title.className = 'catalog-title'; title.textContent = film.title || 'Titre inconnu'; titleWrap.append(title);
+    if (film.original) { const original = document.createElement('div'); original.className = 'catalog-original'; original.textContent = film.original; titleWrap.append(original); }
+    const format = document.createElement('div'); format.className = 'catalog-format'; format.textContent = supportsFor(film).join(' · ') || '—';
+    item.append(titleWrap, format);
+    item.addEventListener('click', () => openFilmFromCatalog(film));
+    item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFilmFromCatalog(film); } });
+    box.append(item);
+
+    // Présentation par affiches : image locale existante, sans créer ni modifier de fichier image.
+    const tile = document.createElement('button');
+    tile.type = 'button'; tile.className = 'poster-tile';
+    tile.setAttribute('aria-label', `Ouvrir la fiche : ${film.title || 'Titre inconnu'}`);
+    const imageWrap = document.createElement('span'); imageWrap.className = 'poster-tile-image';
+    const src = imageSourceFor(film);
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src; img.alt = `Affiche de ${film.title || 'ce titre'}`; img.loading = 'lazy';
+      img.onerror = () => { imageWrap.replaceChildren(); imageWrap.textContent = 'Affiche indisponible'; };
+      imageWrap.append(img);
+    } else {
+      imageWrap.textContent = 'Affiche à ajouter';
+    }
+    const tileTitle = document.createElement('span'); tileTitle.className = 'poster-tile-title'; tileTitle.textContent = film.title || 'Titre inconnu';
+    const tileFormat = document.createElement('span'); tileFormat.className = 'poster-tile-format'; tileFormat.textContent = supportsFor(film).join(' · ') || '—';
+    tile.append(imageWrap, tileTitle, tileFormat);
+    tile.addEventListener('click', () => openFilmFromCatalog(film));
+    posterBox.append(tile);
   });
-  $('pageInfo').textContent=`${visible.length} titre${visible.length===1?'':'s'} affiché${visible.length===1?'':'s'} sur ${list.length}`;
-  $('loadMoreButton').disabled=visibleCount>=list.length;
-  $('loadMoreButton').textContent=visibleCount>=list.length?'Fin du catalogue':'Charger les titres suivants';
+  $('pageInfo').textContent = `${visible.length} titre${visible.length === 1 ? '' : 's'} affiché${visible.length === 1 ? '' : 's'} sur ${list.length}`;
+  $('loadMoreButton').disabled = visibleCount >= list.length;
+  $('loadMoreButton').textContent = visibleCount >= list.length ? 'Fin du catalogue' : 'Charger les titres suivants';
 }
 function addClickableNames(id, value, type) {
   const box=$(id);box.replaceChildren();
@@ -75,7 +127,7 @@ function addClickableNames(id, value, type) {
   // ni les mentions de source (« d'après le roman de… », etc.).
   if(type==='screenwriter') {
     // split() avec un groupe capturant ne conserve que la première occurrence : utiliser matchAll pour toutes.
-    const connector = /\s+et\s+|,?\s*d['’]après\s+(?:le\s+roman\s+autobiographique\s+My\s+Reminiscences\s+as\s+a\s+cowboy\s+publié\s+en\s+1930\s+par|le\s+roman\s+(?:de|d['’])|l['’]œuvre\s+(?:de|d['’])|une\s+histoire\s+(?:de|d['’])|la\s+nouvelle\s+(?:de|d['’]))/ig;
+    const connector = /\s+et\s+|,?\s*d['’]après\s+(?:le\s+roman\s+autobiographique\s+My\s+Reminiscences\s+as\s+a\s+cowboy\s+publié\s+en\s+1930\s+par|le\s+roman\s+(?:de|d['’])|le\s+livre\s+(?:de|d['’])|le\s+manga\s+(?:de|d['’])|l['’]œuvre\s+(?:de|d['’])|une\s+histoire\s+originale\s+(?:de|d['’])|une\s+histoire\s+(?:de|d['’])|la\s+nouvelle\s+(?:de|d['’]))/ig;
     let cursor=0, match;
     const appendName = part => {
       const name=part.trim();
@@ -92,7 +144,7 @@ function addClickableNames(id, value, type) {
       cursor=match.index+match[0].length;
       // Le nom suivant est ensuite passé à appendName(), qui fait trim() :
       // il faut donc mettre l'espace dans le texte du connecteur, pas dans le nom.
-      const isFullSourcePhrase = /d['’]après\s+(?:le\s+roman|l['’]œuvre|une\s+histoire|la\s+nouvelle)\s+de$/i.test(connectorText.trim());
+      const isFullSourcePhrase = /d['’]après\s+(?:le\s+roman|le\s+livre|le\s+manga|l['’]œuvre|une\s+histoire(?:\s+originale)?|la\s+nouvelle)\s+de$/i.test(connectorText.trim());
       if (isFullSourcePhrase) {
         // Consomme les espaces éventuelles déjà présentes pour n'en afficher qu'une.
         while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
@@ -120,35 +172,66 @@ function restoreFilmFromHash() {
   try {
     const key = decodeURIComponent(match[1]);
     const film = films.find(item => filmUrlKey(item) === key);
-    if (film) { showFilm(film, false); return true; }
+    if (film) { showFilm(film, false, 'catalog'); return true; }
   } catch (error) {
     console.warn('Identifiant de fiche invalide dans l’adresse.', error);
   }
   return false;
 }
-function showFilm(film, updateAddress = true) {
+function showFilm(film, updateAddress = true, source = 'catalog') {
+  if (source === 'catalog') {
+    navigationFilms = getFilteredFilms();
+    navigationMode = 'catalog';
+  } else if (source === 'search') {
+    navigationFilms = [...searchNavigationFilms];
+    navigationMode = 'search';
+  }
   currentFilm=film;
   if (updateAddress) setFilmHash(film);
+  renderFilmNavigation();
   showView('home');$('results').classList.add('hidden');$('filmTitle').textContent=film.title||'Titre inconnu';$('filmOriginal').textContent=film.original||'';
   const details=[film.type, film.year_original ? `Année originale / production : ${film.year_original}` : '', film.release_fr_date ? `Sortie française : ${displayFrenchDate(film.release_fr_date)}` : '', film.duration ? `${film.duration} min` : ''].filter(Boolean);
   $('filmTypeYear').textContent=details.join(' · ')||'—';
   const supports=$('filmSupports');supports.replaceChildren();const supportNames=supportsFor(film);
   supportNames.forEach(name=>{const b=document.createElement('button');b.type='button';b.className='support-badge';b.textContent=name;b.title=`Afficher les titres en ${name}`;b.addEventListener('click',()=>{activeSupport=name;visibleCount=PAGE_SIZE;renderStats();renderCatalog();showView('catalog');});supports.append(b);});
   addClickableNames('filmDirector',film.director,'director');addClickableNames('filmScreenwriter',film.screenwriter,'screenwriter');addClickableNames('filmGenre',film.genre,'genre');addClickableNames('filmCast',film.cast,'cast');addClickableNames('filmMusic',film.music,'music');
-  $('filmCountry').textContent=film.country||'—';
-  const sagaBox=$('filmSaga');sagaBox.replaceChildren();
-  if(clean(film.saga)) {
-    const sagaButton=document.createElement('button');sagaButton.type='button';sagaButton.className='text-link';sagaButton.textContent=clean(film.saga);sagaButton.title=`Retrouver tous les films de la saga ${clean(film.saga)}`;
-    sagaButton.addEventListener('click',()=>runSearch(clean(film.saga),'saga',true));sagaBox.append(sagaButton);
-  } else sagaBox.textContent='—';
+  const countryBox=$('filmCountry');if(countryBox) countryBox.textContent=film.country||'—';
+  const sagaBox=$('filmSaga');if(sagaBox){sagaBox.replaceChildren();
+    if(clean(film.saga)) {
+      const sagaButton=document.createElement('button');sagaButton.type='button';sagaButton.className='text-link';sagaButton.textContent=clean(film.saga);sagaButton.title=`Retrouver tous les films de la saga ${clean(film.saga)}`;
+      sagaButton.addEventListener('click',()=>runSearch(clean(film.saga),'saga',true));sagaBox.append(sagaButton);
+    } else sagaBox.textContent='—';
+  }
   $('filmSynopsis').textContent=film.synopsis||'—';$('filmBonus').textContent=film.bonus||'—';
   const poster=$('poster');poster.replaceChildren();if(film.image){const img=document.createElement('img');const imageValue=clean(film.image);img.src=/^(?:https?:)?\/\//i.test(imageValue)||imageValue.startsWith('/')?imageValue:(imageValue.startsWith('images/')?imageValue:`images/${imageValue}`);img.alt=`Affiche de ${film.title||'ce titre'}`;img.loading='lazy';img.onerror=()=>{poster.replaceChildren();poster.textContent='Affiche indisponible';};poster.append(img);}else{poster.textContent='Affiche à ajouter';}
   setStatus('Fiche affichée depuis le catalogue local.');window.scrollTo({top:0,behavior:'smooth'});
 }
+function renderFilmNavigation() {
+  const nav = $('filmNavigation');
+  if (!nav) return;
+  const list = navigationFilms;
+  const index = list.findIndex(f => f._internalId === currentFilm?._internalId);
+  if (!currentFilm || index < 0 || list.length < 2) {
+    nav.classList.add('hidden');
+    return;
+  }
+  nav.classList.remove('hidden');
+  $('previousFilmButton').disabled = index <= 0;
+  $('nextFilmButton').disabled = index >= list.length - 1;
+  $('filmNavigationInfo').textContent = `${index + 1} sur ${list.length} · ${navigationMode === 'search' ? 'Résultats de recherche' : 'Ordre alphabétique'}`;
+}
+function moveFilm(direction) {
+  if (!currentFilm || !navigationFilms.length) return;
+  const index = navigationFilms.findIndex(f => f._internalId === currentFilm._internalId);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= navigationFilms.length) return;
+  showFilm(navigationFilms[nextIndex], true, 'keep');
+}
+
 function renderResults(label, list) {
   const box=$('results');box.replaceChildren();box.classList.remove('hidden');const head=document.createElement('div');head.className='results-head';head.textContent=`${label} — ${list.length} résultat${list.length===1?'':'s'}`;box.append(head);
   if(!list.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='Aucun résultat.';box.append(empty);return;}
-  list.slice(0,200).forEach(f=>{const item=document.createElement('div');item.className='result-item';item.tabIndex=0;item.setAttribute('role','button');const title=document.createElement('div');title.className='result-title';title.textContent=f.title||'Titre inconnu';const sub=document.createElement('div');sub.className='result-sub';sub.textContent=[f.original,f.year_original,f.duration?`${f.duration} min`:'',f.format].filter(Boolean).join(' · ');item.append(title,sub);const open=()=>showFilm(f);item.addEventListener('click',open);item.addEventListener('keydown',e=>{if(e.key==='Enter'){open();}});box.append(item);});
+  list.slice(0,200).forEach(f=>{const item=document.createElement('div');item.className='result-item';item.tabIndex=0;item.setAttribute('role','button');const title=document.createElement('div');title.className='result-title';title.textContent=f.title||'Titre inconnu';const sub=document.createElement('div');sub.className='result-sub';sub.textContent=[f.original,f.year_original,f.duration?`${f.duration} min`:'',f.format].filter(Boolean).join(' · ');item.append(title,sub);const open=()=>showFilm(f, true, 'search');item.addEventListener('click',open);item.addEventListener('keydown',e=>{if(e.key==='Enter'){open();}});box.append(item);});
 }
 function parseDurationValue(value) {
   const q = normalizeText(value).replace(/\s+/g, '');
@@ -178,6 +261,7 @@ function runSearch(query, type=null, scrollToResults=false) {
     if(selectedType==='support') return supportsFor(f).some(s=>normalizeText(s).includes(normalized)) || normalizeText(f.format).includes(normalized);
     return normalizeText(fields[selectedType]?.(f) || '').includes(normalized);
   });
+  searchNavigationFilms = [...found].sort((a, b) => clean(a.title).localeCompare(clean(b.title), 'fr', { sensitivity: 'base', numeric: true }));
   const labels={all:'Tous les champs',title:'Titre du film',original:'Titre original',year:'Année de production',duration:'Durée',director:'Réalisateur',screenwriter:'Scénariste',cast:'Acteurs / casting',music:'Musique',support:'Support',synopsis:'Synopsis',bonus:'Bonus',genre:'Genre',saga:'Saga'};
   const label=selectedType==='duration'&&durationTarget!==null?`Durée (${durationTarget-5} à ${durationTarget+5} min)`:labels[selectedType]||'Recherche';
   renderResults(`${label} : « ${q} »`,found);setStatus(`${found.length} résultat(s) trouvé(s).`);
@@ -188,6 +272,18 @@ function updateSearchPlaceholder() {
   const placeholders={title:'Ex. La Rivière de nos amours',original:'Ex. The Indian Fighter',year:'Ex. 1955',duration:'Ex. 88, 1h28 ou 88 min',director:'Nom du réalisateur',screenwriter:'Nom du scénariste',cast:'Nom d’un acteur',genre:'Ex. Western',music:'Nom du compositeur',support:'Ex. Blu-ray, DVD, 4K UHD',synopsis:'Mot ou expression du synopsis',bonus:'Mot ou expression des bonus',all:'Recherche dans tous les champs'};
   $('searchInput').placeholder=placeholders[type]||'Saisir un terme…';
 }
+
+$('previousFilmButton')?.addEventListener('click', () => moveFilm(-1));
+$('nextFilmButton')?.addEventListener('click', () => moveFilm(1));
+document.addEventListener('keydown', event => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  if (!currentFilm || $('homeView').classList.contains('view-hidden')) return;
+  const target = event.target;
+  if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(target.tagName))) return;
+  event.preventDefault();
+  moveFilm(event.key === 'ArrowLeft' ? -1 : 1);
+});
 
 async function init() {
   try {
@@ -200,19 +296,35 @@ async function init() {
     console.error(error);setStatus('Impossible de charger data/films.json. Vérifiez que les fichiers ont bien été ajoutés au dépôt GitHub.');$('catalogList').textContent='Le catalogue ne peut pas être chargé. Vérifiez le fichier data/films.json.';
   }
 }
-$('catalogButton').addEventListener('click',()=>{
-  if (window.location.hash.startsWith('#film=')) history.replaceState(null, '', window.location.pathname + window.location.search);
-  showView('catalog');
-});
 window.addEventListener('hashchange', () => {
   if (!window.location.hash.startsWith('#film=')) {
     currentFilm = null;
+    $('filmNavigation')?.classList.add('hidden');
     showView('catalog');
     return;
+  }
+  // Un changement d'adresse provoqué par Précédent/Suivant ne doit pas
+  // réinitialiser le contexte de recherche en cours.
+  try {
+    const key = decodeURIComponent(window.location.hash.slice('#film='.length));
+    const addressedFilm = films.find(item => filmUrlKey(item) === key);
+    if (addressedFilm && currentFilm && addressedFilm._internalId === currentFilm._internalId) return;
+  } catch (error) {
+    console.warn('Identifiant de fiche invalide dans l’adresse.', error);
   }
   restoreFilmFromHash();
 });
 $('homeButton').addEventListener('click',()=>showView('home'));
+$('posterCatalogButton').addEventListener('click',()=>{
+  if (window.location.hash.startsWith('#film=')) history.replaceState(null, '', window.location.pathname + window.location.search);
+  catalogPresentation = 'posters';
+  showView('catalog');
+});
+$('catalogButton').addEventListener('click',()=>{
+  if (window.location.hash.startsWith('#film=')) history.replaceState(null, '', window.location.pathname + window.location.search);
+  catalogPresentation = 'list';
+  showView('catalog');
+});
 $('searchButton').addEventListener('click',()=>runSearch($('searchInput').value));
 $('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch($('searchInput').value);});
 $('searchCriterion').addEventListener('change',updateSearchPlaceholder);

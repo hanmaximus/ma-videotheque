@@ -11,8 +11,9 @@
 <body>
 <div class="container">
   <nav class="nav-tools" aria-label="Navigation principale">
-    <button id="catalogButton" class="nav-button active" type="button">Catalogue</button>
+    <button id="catalogButton" class="nav-button active" type="button"><span class="nav-label-desktop">Catalogue par liste</span><span class="nav-label-mobile">Liste</span></button>
     <button id="homeButton" class="nav-button" type="button">Recherche / Fiche</button>
+    <button id="posterCatalogButton" class="nav-button" type="button"><span class="nav-label-desktop">Catalogue par affiches</span><span class="nav-label-mobile">Affiche</span></button>
   </nav>
 
   <section id="catalogView">
@@ -26,6 +27,7 @@
       <button id="clearFilterButton" class="secondary-button" type="button">Effacer le filtre</button>
     </div>
     <div id="catalogList" class="catalog-list" aria-live="polite"></div>
+    <div id="catalogPosterGrid" class="catalog-poster-grid hidden" aria-label="Catalogue par affiches" aria-live="polite"></div>
     <div class="pagination">
       <span id="pageInfo" class="page-info"></span>
       <button id="loadMoreButton" type="button">Charger les titres suivants</button>
@@ -72,12 +74,15 @@
         <div class="meta"><strong>Genre :</strong> <span id="filmGenre">—</span></div>
         <div class="meta"><strong>Casting :</strong> <span id="filmCast">—</span></div>
         <div class="meta"><strong>Musique :</strong> <span id="filmMusic">—</span></div>
-        <div class="meta"><strong>Pays :</strong> <span id="filmCountry">—</span></div>
-        <div class="meta"><strong>Saga :</strong> <span id="filmSaga">—</span></div>
         <div class="section-title">Synopsis</div><div id="filmSynopsis" class="body-copy">—</div>
         <div class="section-title">Bonus</div><div id="filmBonus" class="body-copy">—</div>
       </div>
     </article>
+    <div id="filmNavigation" class="film-navigation hidden" aria-label="Navigation entre les fiches">
+      <button id="previousFilmButton" class="secondary-button" type="button">← Précédent</button>
+      <span id="filmNavigationInfo" class="film-navigation-info" aria-live="polite"></span>
+      <button id="nextFilmButton" class="secondary-button" type="button">Suivant →</button>
+    </div>
   </section>
   <footer>Version de test — données importées depuis Excel.</footer>
 </div>
