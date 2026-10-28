@@ -287,7 +287,9 @@ document.addEventListener('keydown', event => {
 
 async function init() {
   try {
-    const response=await fetch('data/films.json');if(!response.ok)throw new Error(`Erreur HTTP ${response.status}`);
+    const response = await fetch('data/films.json?v=' + Date.now(), {
+  cache: 'no-store'
+});if(!response.ok)throw new Error(`Erreur HTTP ${response.status}`);
     const data=await response.json();if(!Array.isArray(data))throw new Error('Le fichier JSON doit contenir une liste de titres.');
     films=data.map((f,i)=>({...f,_internalId:`title-${i}`}));
     renderStats();renderCatalog();setStatus(`${films.length} titres chargés depuis le fichier de test Excel.`);
